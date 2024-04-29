@@ -24,6 +24,8 @@ plt.rcParams.update({
 #edit this for how long each thing occurs within the trial
 sample_rate = 10000
 stiffness_time:int = 65 * sample_rate
+RFEstiffness_time:int = 160 * sample_rate
+work_time_start:int = 45 * sample_rate
 
 
 class Error(Exception):
@@ -52,7 +54,7 @@ def ReadFile(File: str = None, model: str = None, test: str = None):
 
     if Filename.__contains__('.dat'):
         Filename: list = Filename.split("_")
-        Filename = Filename[0:4]
+        Filename = Filename[0:5]
     else:
         Filename = Filename.split("_")
 
@@ -90,7 +92,7 @@ def ReadFile(File: str = None, model: str = None, test: str = None):
             
     return Data, Subject, Muscle, Fibre, FibreLength, SarcomereLength, CSA
 
-def ktrAnalysis(Data: pd.DataFrame = None, Filename: str = None, CSA: float = None, Graph: bool = False) -> tuple[float, float, float, pd.Series, pd.Series, float]:
+def ktrAnalysis(Data: pd.DataFrame = None, Filename: str = None, CSA: float = None, FibreLength: float = None, Graph: bool = False) -> tuple[float, float, float, pd.Series, pd.Series, float]:
 
     def StiffnessAnalysis(Data: pd.DataFrame, stiffness_time: int = stiffness_time):
         StiffnessWindow = range(int(stiffness_time) - 100, int(stiffness_time) + 200)
@@ -105,9 +107,30 @@ def ktrAnalysis(Data: pd.DataFrame = None, Filename: str = None, CSA: float = No
 
 
         return Stiffness, Strain, Modulus
-
+    
+    def Work_calculate(Data: pd.DataFrame, work_time_start: int = work_time_start, FibreLength: float = None):
+        work = 0
+        work_Window = range(int(work_time_start), int((work_time_start)+int((FibreLength*1.5)*10000))) #this window specifies the range
+        Work_Time = (int(work_time_start)+(int(FibreLength*1.5)*10000)) - (int(work_time_start)) #time for how long the work goes on for
+        SumForce = (Data['Force'][work_Window])
+        Intergral_force_rfd = np.trapz(SumForce)
+        Intergral_force = Intergral_force_rfd.sum() # Cumulative force at time t, the two rows above are for the intergral
+        delta_length = (Data['Length'][int(work_time_start)+int((FibreLength*1.5)*10000)]) - (Data['Length'][work_time_start])  # Change in length
+        work += ((Intergral_force * Work_Time)/10000) * delta_length #seemingly to give the value in mJ
+        print((int(work_time_start)+int((FibreLength*1.5)*10000)))
+        print(FibreLength)
+        print(delta_length)
+        print(Intergral_force_rfd)
+        return work
+    
+    work = Work_calculate(Data, work_time_start, FibreLength)
     Stiffness, Strain, Modulus = StiffnessAnalysis(Data = Data)
+    RFEStiffness, RFEStrain, RFEModulus = StiffnessAnalysis(Data = Data, stiffness_time=RFEstiffness_time)
     Peak_force = Data['Force'][600000:610000].mean()
+    RFEPeak_force = Data['Force'][1550000:1560000].mean()
+    print(work)
+        
+
 
     if Graph == True:
         fig = plt.figure()
@@ -115,8 +138,9 @@ def ktrAnalysis(Data: pd.DataFrame = None, Filename: str = None, CSA: float = No
         plt.plot(Data['Time'], Data['Force'], color = 'black', label = 'Raw')
         plt.plot(Data['Time'][600000:610000], Data['Force'][600000:610000], color = 'blue', label = 'Peak')
         plt.plot(Data['Time'][200000:205000], Data['Force'][200000:205000], color = 'Yellow', label = 'Baseline')
-        plt.plot(Data['Time'][650000:655000], Data['Force'][650000:655000], color = 'Orange', label = 'Stiff')
-
+        plt.plot(Data['Time'][650000:655000], Data['Force'][650000:655000], color = 'Orange', label = 'ISO Stiff')
+        plt.plot(Data['Time'][1550000:1560000], Data['Force'][1550000:1560000], color = 'green', label = 'RFEPeak')
+        plt.plot(Data['Time'][1600000:1605000], Data['Force'][1600000:1605000], color = 'Red', label = 'RFE Stiff')
         plt.ylabel('Force (mN)')
         plt.xlabel('Time (s)')
         plt.text(
@@ -129,4 +153,4 @@ def ktrAnalysis(Data: pd.DataFrame = None, Filename: str = None, CSA: float = No
         plt.legend()
         plt.show()
 
-    return Stiffness, Modulus, Peak_force/CSA
+    return Stiffness, Modulus, Peak_force/CSA, RFEStiffness, RFEModulus, RFEPeak_force/CSA, work/1000

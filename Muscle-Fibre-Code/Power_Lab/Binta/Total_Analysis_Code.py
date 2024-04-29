@@ -7,6 +7,7 @@ import warnings
 import openpyxl
 import RFE
 import RFD
+import RFDwork
 from tkinter import filedialog
 
 
@@ -160,9 +161,9 @@ def main():
         if test == 'rFELong':
             results['Stiffness (pCa 4.5)'], results['Modulus (pCa 4.5)'], results ['Active Specific Force'], results['RFEStiffness (pCa 4.5)'], results['RFEModulus (pCa 4.5)'], results ['RFEActive Specific Force']=RFE.ktrAnalysis(Data = results['data'], Filename = os.path.basename(file), CSA=results['CSA'], Graph = False)
         if test == 'rFDFast':
-            results['Stiffness (pCa 4.5)'], results['Modulus (pCa 4.5)'], results ['Active Specific Force'], results['RFEStiffness (pCa 4.5)'], results['RFEModulus (pCa 4.5)'], results ['RFEActive Specific Force']=RFD.ktrAnalysis(Data = results['data'], Filename = os.path.basename(file), CSA=results['CSA'], Graph = False)
+            results['Stiffness (pCa 4.5)'], results['Modulus (pCa 4.5)'], results ['Active Specific Force'], results['RFEStiffness (pCa 4.5)'], results['RFEModulus (pCa 4.5)'], results ['RFEActive Specific Force'], results ['Work (J)']=RFDwork.ktrAnalysis(Data = results['data'], Filename = os.path.basename(file), CSA=results['CSA'], FibreLength=results['Fibre Length'], Graph = True)
         if test == 'rFDSlow':
-            results['Stiffness (pCa 4.5)'], results['Modulus (pCa 4.5)'], results ['Active Specific Force'], results['RFEStiffness (pCa 4.5)'], results['RFEModulus (pCa 4.5)'], results ['RFEActive Specific Force']=RFD.ktrAnalysis(Data = results['data'], Filename = os.path.basename(file), CSA=results['CSA'], Graph = False)
+            results['Stiffness (pCa 4.5)'], results['Modulus (pCa 4.5)'], results ['Active Specific Force'], results['RFEStiffness (pCa 4.5)'], results['RFEModulus (pCa 4.5)'], results ['RFEActive Specific Force'], results ['Work (J)']=RFDwork.ktrAnalysis(Data = results['data'], Filename = os.path.basename(file), CSA=results['CSA'], FibreLength=results['Fibre Length'], Graph = True)
         individual_test_info[file] = results.copy()
         del individual_test_info[file]['data']
         #For the RFD code, the data will output in the same way but take note that the first test is teh RFD and the second is the iso instead  
