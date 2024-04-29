@@ -117,10 +117,6 @@ def ktrAnalysis(Data: pd.DataFrame = None, Filename: str = None, CSA: float = No
         Intergral_force = Intergral_force_rfd.sum() # Cumulative force at time t, the two rows above are for the intergral
         delta_length = (Data['Length'][int(work_time_start)+int((FibreLength*1.5)*10000)]) - (Data['Length'][work_time_start])  # Change in length
         work += ((Intergral_force * Work_Time)/10000) * delta_length #seemingly to give the value in mJ
-        print((int(work_time_start)+int((FibreLength*1.5)*10000)))
-        print(FibreLength)
-        print(delta_length)
-        print(Intergral_force_rfd)
         return work
     
     work = Work_calculate(Data, work_time_start, FibreLength)
@@ -128,7 +124,7 @@ def ktrAnalysis(Data: pd.DataFrame = None, Filename: str = None, CSA: float = No
     RFEStiffness, RFEStrain, RFEModulus = StiffnessAnalysis(Data = Data, stiffness_time=RFEstiffness_time)
     Peak_force = Data['Force'][600000:610000].mean()
     RFEPeak_force = Data['Force'][1550000:1560000].mean()
-    print(work)
+   
         
 
 
