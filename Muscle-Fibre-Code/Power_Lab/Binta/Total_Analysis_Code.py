@@ -150,7 +150,7 @@ def main():
             test = 'rFEShort'
         elif '27' in Filename:
             test = 'rFELong'
-        elif 'FAST.dat' in Filename:
+        elif 'FAST' in Filename:
             test = 'rFDFast'             
         else: 
             test = 'rFDSlow'

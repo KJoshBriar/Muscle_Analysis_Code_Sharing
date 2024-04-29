@@ -111,12 +111,13 @@ def ktrAnalysis(Data: pd.DataFrame = None, Filename: str = None, CSA: float = No
     def Work_calculate(Data: pd.DataFrame, work_time_start: int = work_time_start, FibreLength: float = None):
         work = 0
         work_Window = range(int(work_time_start), int((work_time_start)+int((FibreLength*1.5)*10000))) #this window specifies the range
-        Work_Time = (int(work_time_start)+(int(FibreLength*1.5)*10000)) - (int(work_time_start)) #time for how long the work goes on for
+        Work_Time = (int(work_time_start)+(int((FibreLength*1.5)*10000))) - (int(work_time_start)) #time for how long the work goes on for
         SumForce = (Data['Force'][work_Window])
         Intergral_force_rfd = np.trapz(SumForce)
         Intergral_force = Intergral_force_rfd.sum() # Cumulative force at time t, the two rows above are for the intergral
         delta_length = (Data['Length'][int(work_time_start)+int((FibreLength*1.5)*10000)]) - (Data['Length'][work_time_start])  # Change in length
         work += ((Intergral_force * Work_Time)/10000) * delta_length #seemingly to give the value in mJ
+        print(int(FibreLength*1.5))
         return work
     
     work = Work_calculate(Data, work_time_start, FibreLength)
@@ -137,7 +138,7 @@ def ktrAnalysis(Data: pd.DataFrame = None, Filename: str = None, CSA: float = No
         plt.plot(Data['Time'][650000:655000], Data['Force'][650000:655000], color = 'Orange', label = 'ISO Stiff')
         plt.plot(Data['Time'][1550000:1560000], Data['Force'][1550000:1560000], color = 'green', label = 'RFEPeak')
         plt.plot(Data['Time'][1600000:1605000], Data['Force'][1600000:1605000], color = 'Red', label = 'RFE Stiff')
-        plt.plot(Data['Time'][int(work_time_start):int(work_time_start)+int(FibreLength*1.5)*10000], Data['Force'][int(work_time_start):int(work_time_start)+int(FibreLength*1.5)*10000], color = 'Purple', label = 'Work Window')
+        plt.plot(Data['Time'][int(work_time_start):int(work_time_start)+int(FibreLength*1.5)*10000], Data['Force'][int(work_time_start):int(work_time_start)+int(FibreLength*1.5)*10000], color = 'Pink', label = 'Work Window')
         plt.ylabel('Force (mN)')
         plt.xlabel('Time (s)')
         plt.text(
