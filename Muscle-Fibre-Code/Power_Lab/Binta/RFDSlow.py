@@ -138,7 +138,7 @@ def ktrAnalysis(Data: pd.DataFrame = None, Filename: str = None, CSA: float = No
         plt.plot(Data['Time'][650000:655000], Data['Force'][650000:655000], color = 'Orange', label = 'ISO Stiff')
         plt.plot(Data['Time'][1550000:1560000], Data['Force'][1550000:1560000], color = 'green', label = 'RFEPeak')
         plt.plot(Data['Time'][1600000:1605000], Data['Force'][1600000:1605000], color = 'Red', label = 'RFE Stiff')
-        plt.plot(Data['Time'][int(work_time_start):int(work_time_start)+int(FibreLength*1.5)*10000], Data['Force'][int(work_time_start):int(work_time_start)+int(FibreLength*1.5)*10000], color = 'Pink', label = 'Work Window')
+        plt.plot(Data['Time'][int(work_time_start):int(work_time_start)+int((FibreLength*1.5)*10000)], Data['Force'][int(work_time_start):int(work_time_start)+int((FibreLength*1.5)*10000)], color = 'Pink', label = 'Work Window')
         plt.ylabel('Force (mN)')
         plt.xlabel('Time (s)')
         plt.text(
