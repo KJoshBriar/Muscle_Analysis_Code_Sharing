@@ -1,0 +1,248 @@
+
+import os
+import numpy as np
+import pandas as pd
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from tkinter import filedialog
+
+
+plt.rcParams.update({
+    'font.family': 'times new roman',
+    'xtick.labelsize': 8,
+    'ytick.labelsize': 8,
+    'axes.labelsize': 10,
+    'axes.titlesize': 10,
+    'axes.spines.right': False,
+    'axes.spines.top': False,
+    'figure.dpi': 200,
+    'legend.edgecolor': 'white',
+    'figure.figsize': [6, 4],
+    'figure.autolayout': True})
+
+sample_rate = 10000
+stiffness_time:int = 30 * sample_rate
+stiffness_time_AS1:int = 31 * sample_rate
+stiffness_time_AL2:int = 32 * sample_rate
+stiffness_time_AS2:int = 33 * sample_rate
+stiffness_time_AL3:int = 34 * sample_rate
+stiffness_time_AS3:int = 35 * sample_rate
+stiffness_time_RL1:int = 60 * sample_rate
+stiffness_time_RS1:int = 61 * sample_rate
+stiffness_time_RL2:int = 62 * sample_rate
+stiffness_time_RS2:int = 63 * sample_rate
+stiffness_time_RL3:int = 64 * sample_rate
+stiffness_time_RS3:int = 65 * sample_rate
+
+
+class Error(Exception):
+    pass
+
+def ReadFile(File: str = None, model: str = None, test: str = None):
+
+    Subject: str = None
+    Fibre: str = None
+    Muscle: str = None
+    def GetTextData(skiprows: int, columns: dict) -> pd.DataFrame():
+        return pd.read_table(
+                    File,
+                    encoding = 'latin1',
+                    header = None,
+                    delim_whitespace = True,
+                    low_memory = False,
+                    on_bad_lines='skip',
+                    memory_map = True,
+                    skiprows = skiprows,
+                    usecols = columns.keys(),
+                    names = columns.values())
+        
+
+    Filename: str = os.path.basename(File)
+    #-----Get characteristic info from filename-----+
+
+    if Filename.__contains__('.dat'):
+        Filename: list = Filename.split("_")
+        Filename = Filename[0:4]
+    else:
+        Filename = Filename.split("_")
+
+    #-----Grab info from filename-----+
+    Subject: str = Filename[0]
+    Fibre: int = Filename[1]
+    Muscle: str = Filename[2]
+    SLLENGTH: int = Filename[3].split('.')[0]
+
+    Data = GetTextData(skiprows = 0, columns = {0: 'Time', 1: 'Length', 2: 'Stim', 3: 'Force'})
+
+    try:
+        FibreLength = float(Data['Stim'][10])
+        SarcomereLength = float(Data['Force'][11])
+        Diameter = float(Data['Length'][12])
+        CSA = np.pi*(Diameter/2)**2
+    except:
+        print(Error(f"Physical characteristics for {File} not calculated correctly. Check text file for weird lines of data at beginning of file."))
+
+#change this to the appropriate start time
+    data_start = Data.index[Data['Time'] == '25000.00'][0]
+    Data = pd.DataFrame(Data[data_start:], dtype = float).reset_index(drop = True)
+    Baseline_force = Data['Force'][1:500].mean()
+    Data['Force'] = Data['Force'] - Baseline_force
+    Data['Time'] = Data['Time'].div(1000)
+    #Data['Normalized Length'] = Data['Stim'].div(FibreLength)
+            
+    return Data, Subject, Muscle, Fibre, FibreLength, SarcomereLength, CSA, SLLENGTH
+
+def StiffnessR(Data: pd.DataFrame = None, Filename: str = None, CSA: float = None, Graph: bool = False) -> tuple[float, float, float, pd.Series, pd.Series, float]:
+    def StiffnessAnalysis(Data: pd.DataFrame, stiffness_time: int = stiffness_time):
+        StiffnessWindow = range(int(stiffness_time) - 100, int(stiffness_time) + 200)
+        ForceWindow = range(int(stiffness_time) - 5001, int(stiffness_time) - 1)
+        dF = (Data['Force'][StiffnessWindow]).max() - (Data['Force'][ForceWindow]).mean()
+        dLo = (Data['Stim'][StiffnessWindow]).max() - (Data['Stim'][ForceWindow]).mean()
+        Strain = ((Data['Stim'][StiffnessWindow]).max() - (Data['Stim'][ForceWindow]).mean())/(Data['Stim'][ForceWindow].mean())
+        Stiffness = dF/dLo
+        Modulus = (dF/CSA)/Strain
+
+        return Stiffness, Modulus
+    
+    def StiffnessAnalysisS(Data: pd.DataFrame, stiffness_time: int = stiffness_time):
+        StiffnessWindow = range(int(stiffness_time) - 100, int(stiffness_time) + 200)
+        ForceWindow = range(int(stiffness_time) - 5001, int(stiffness_time) - 1)
+        dF = (Data['Force'][StiffnessWindow]).min() - (Data['Force'][ForceWindow]).mean()
+        dLo = (Data['Stim'][StiffnessWindow]).min() - (Data['Stim'][ForceWindow]).mean()
+        Strain = ((Data['Stim'][StiffnessWindow]).min() - (Data['Stim'][ForceWindow]).mean())/(Data['Stim'][ForceWindow].mean())
+        StiffnessS = dF/dLo
+        ModulusS = (dF/CSA)/Strain        
+
+        return StiffnessS, ModulusS
+
+    Stiffness1, Modulus1 = StiffnessAnalysis(Data = Data)
+    Stiffness2, Modulus2 = StiffnessAnalysisS(Data = Data, stiffness_time = stiffness_time_AS1)
+    Stiffness3, Modulus3 = StiffnessAnalysis(Data = Data, stiffness_time = stiffness_time_AL2)
+    Stiffness4, Modulus4 = StiffnessAnalysisS(Data = Data, stiffness_time = stiffness_time_AS2)
+    Stiffness5, Modulus5 = StiffnessAnalysis(Data = Data, stiffness_time = stiffness_time_AL3)
+    Stiffness6, Modulus6 = StiffnessAnalysisS(Data = Data, stiffness_time = stiffness_time_AS3)
+    Stiffness7, Modulus7 = StiffnessAnalysis(Data = Data, stiffness_time = stiffness_time_RL1)
+    Stiffness8, Modulus8 = StiffnessAnalysisS(Data = Data, stiffness_time = stiffness_time_RS1)
+    Stiffness9, Modulus9 = StiffnessAnalysis(Data = Data, stiffness_time = stiffness_time_RL2)
+    Stiffness10, Modulus10 = StiffnessAnalysisS(Data = Data, stiffness_time = stiffness_time_RS2)
+    Stiffness11, Modulus11 = StiffnessAnalysis(Data = Data, stiffness_time = stiffness_time_RL3)
+    Stiffness12, Modulus12 = StiffnessAnalysisS(Data = Data, stiffness_time = stiffness_time_RS3)
+    Peak_force = Data['Force'][200000:210000].mean()
+
+    if Graph == True:
+        fig = plt.figure()
+        
+        plt.plot(Data['Time'], Data['Force'], color = 'black', label = 'Raw')
+        plt.plot(Data['Time'][200000:210000], Data['Force'][200000:210000], color = 'blue', label = 'Peak')
+        plt.plot(Data['Time'][1:500], Data['Force'][1:500], color = 'Yellow', label = 'Baseline')
+        plt.plot(Data['Time'][300000:300500], Data['Force'][300000:300500], color = 'Green', label = 'Length')
+        plt.plot(Data['Time'][310000:310500], Data['Force'][310000:310500], color = 'Red', label = 'Short')
+        plt.plot(Data['Time'][320000:320500], Data['Force'][320000:320500], color = 'Green')
+        plt.plot(Data['Time'][340000:340500], Data['Force'][340000:340500], color = 'Green')
+        plt.plot(Data['Time'][600000:600500], Data['Force'][600000:600500], color = 'Green')
+        plt.plot(Data['Time'][620000:620500], Data['Force'][620000:620500], color = 'Green')
+        plt.plot(Data['Time'][640000:640500], Data['Force'][640000:640500], color = 'Green')
+        plt.plot(Data['Time'][330000:330500], Data['Force'][330000:330500], color = 'Red')
+        plt.plot(Data['Time'][350000:350500], Data['Force'][350000:350500], color = 'Red')
+        plt.plot(Data['Time'][610000:610500], Data['Force'][610000:610500], color = 'Red')
+        plt.plot(Data['Time'][630000:630500], Data['Force'][630000:630500], color = 'Red')
+        plt.plot(Data['Time'][650000:650500], Data['Force'][650000:650500], color = 'Red')
+        plt.ylabel('Force (mN)')
+        plt.xlabel('Time (s)')
+        plt.text(
+            x = 0.5, y = 0.1,
+            s = f'Active Specific Force = {(Peak_force/CSA):.2f}',
+            transform = plt.gca().transAxes,
+            horizontalalignment = 'center',
+            verticalalignment = 'center')
+        plt.title(Filename)
+        plt.legend()
+        plt.show()
+
+    return  Stiffness1, Stiffness2, Stiffness3, Stiffness4, Stiffness5, Stiffness6, Stiffness7, Stiffness8, Stiffness9, Stiffness10, Stiffness11, Stiffness12, Modulus1, Modulus2, Modulus3, Modulus4, Modulus5, Modulus6, Modulus7, Modulus8, Modulus9, Modulus10, Modulus11, Modulus12, Peak_force
+
+def main():
+    Directory = filedialog.askdirectory()
+
+    AllFiles = []
+    for root, subdirs, files in os.walk(Directory):
+        for file in files:
+            if 'Store' in file:
+                continue
+            AllFiles.append(os.path.join(root, file))
+    AllFiles = sorted(AllFiles)
+
+
+    final_results = []
+    for file in AllFiles:
+
+        Data, Subject, Muscle, Fibre, FibreLength, SarcomereLength, CSA, SLLENGTH = ReadFile(File = file)
+        Stiffness1, Stiffness2, Stiffness3, Stiffness4, Stiffness5, Stiffness6, Stiffness7, Stiffness8, Stiffness9, Stiffness10, Stiffness11, Stiffness12, Modulus1, Modulus2, Modulus3, Modulus4, Modulus5, Modulus6, Modulus7, Modulus8, Modulus9, Modulus10, Modulus11, Modulus12, Peak_force = StiffnessR(Data = Data, Filename = os.path.basename(file), CSA=CSA, Graph = False)
+
+        OrganizedData = {
+            'Subject': Subject,
+            'Muscle': Muscle,
+            'Fibre Length': FibreLength,
+            'Fibre': Fibre,
+            'Sarcomere Length': SLLENGTH,
+            'CSA': CSA,
+            'AL1': Stiffness1,
+            'AL2': Stiffness3,
+            'AL3': Stiffness5,
+            'AL STD': '',
+            'AS1': Stiffness2,
+            'AS2': Stiffness4,
+            'AS3': Stiffness6,
+            'AS STD': '',
+            'RL1': Stiffness7,
+            'RL2': Stiffness9,
+            'RL3': Stiffness11,
+            'RL STD': '',
+            'RS1': Stiffness8,
+            'RS2': Stiffness10,
+            'RS3': Stiffness12,
+            'RS STD': '',
+            'AL1 Modulus': Modulus1,
+            'AL2 Modulus': Modulus3,
+            'AL3 Modulus': Modulus5,
+            'ALM STD': '',
+            'AS1 Modulus': Modulus2,
+            'AS2 Modulus': Modulus4,
+            'AS3 Modulus': Modulus6,
+            'ASM STD': '',
+            'RL1 Modulus': Modulus7,
+            'RL2 Modulus': Modulus9,
+            'RL3 Modulus': Modulus11,
+            'RLM STD': '',
+            'RS1 Modulus': Modulus8,
+            'RS2 Modulus': Modulus10,
+            'RS3 Modulus': Modulus12,
+            'RSM STD': '',
+            'Active Specific Force': Peak_force / CSA}
+
+        final_results.append(OrganizedData)
+    
+    for test in final_results:
+        print(test)
+
+    # return Final_results
+    return final_results 
+
+#call the main () functio to get final_results
+final_results = main()
+
+# your code for generating the final results
+for File in final_results:
+     excel_results = pd.DataFrame(columns = [key for key in File.keys()])
+
+for idx, results in enumerate(final_results):
+    for column, data in results.items():
+        excel_results.loc[idx, column] = data
+
+#Just Change this spot only
+excel_file_path = '/Users/keaton.briar/Desktop/untitled folder/untitled folder/test.xlsx'
+
+excel_results.to_excel(excel_file_path, index = False)
+
+if __name__ == "__main__":
+    main()
