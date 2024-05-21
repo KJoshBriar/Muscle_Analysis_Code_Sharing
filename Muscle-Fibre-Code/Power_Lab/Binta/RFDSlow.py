@@ -110,14 +110,16 @@ def ktrAnalysis(Data: pd.DataFrame = None, Filename: str = None, CSA: float = No
     
     def Work_calculate(Data: pd.DataFrame, work_time_start: int = work_time_start, FibreLength: float = None):
         work = 0
-        work_Window = range(int(work_time_start), int((work_time_start)+int((FibreLength*1.5)*10000))) #this window specifies the range
-        Work_Time = (int(work_time_start)+(int((FibreLength*1.5)*10000))) - (int(work_time_start)) #time for how long the work goes on for
-        SumForce = (Data['Force'][work_Window])
-        Intergral_force_rfd = np.trapz(SumForce)
-        Intergral_force = Intergral_force_rfd.sum() # Cumulative force at time t, the two rows above are for the intergral
-        delta_length = (Data['Length'][int(work_time_start)+int((FibreLength*1.5)*10000)]) - (Data['Length'][work_time_start])  # Change in length
-        work += ((Intergral_force * Work_Time)/10000) * delta_length #seemingly to give the value in mJ
-        print(int(FibreLength*1.5))
+        work_Window = range(int(work_time_start), int((work_time_start)+(FibreLength*1.5)*10000)) #this window specifies the range
+        Work_Time = (int(work_time_start)+((FibreLength*1.5)*10000)) - (int(work_time_start)) #time for how long the work goes on for
+        SumForce = (Data['Force'][work_Window]).sum()
+        FrameCount = (Data['Force'][work_Window]).count()
+        print(FrameCount)
+        #Intergral_force_rfd = np.trapz(SumForce)
+        #Intergral_force = Intergral_force_rfd.sum() # Cumulative force at time t, the two rows above are for the intergral
+        delta_length = (Data['Length'][int(work_time_start)+((FibreLength*1.5)*10000)]) - (Data['Length'][work_time_start])  # Change in length
+        work += ((SumForce * Work_Time * delta_length)*10000)/FrameCount
+        print((FibreLength*1.5))
         return work
     
     work = Work_calculate(Data, work_time_start, FibreLength)
