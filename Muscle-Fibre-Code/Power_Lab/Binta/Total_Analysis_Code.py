@@ -100,7 +100,7 @@ def ReadFile(File: str = None, model: str = None, Filename = None, test: str = N
         Fibre: str = Filename[1]
         data_start = Data.index[Data['Time'] == '0.00'][0]
         Data = pd.DataFrame(Data[data_start:], dtype = float).reset_index(drop = True)
-        Baseline_force = Data['Force'][200000:205000].mean()
+        Baseline_force = Data['Force'][100000:105000].mean()
         Data['Force'] = Data['Force'] - Baseline_force
         Data['Time'] = Data['Time'].div(1000)
         results = {
@@ -117,7 +117,7 @@ def ReadFile(File: str = None, model: str = None, Filename = None, test: str = N
         Fibre: str = Filename[1]
         data_start = Data.index[Data['Time'] == '0.00'][0]
         Data = pd.DataFrame(Data[data_start:], dtype = float).reset_index(drop = True)
-        Baseline_force = Data['Force'][200000:205000].mean()
+        Baseline_force = Data['Force'][100000:105000].mean()
         Data['Force'] = Data['Force'] - Baseline_force
         Data['Time'] = Data['Time'].div(1000)
         results = {
@@ -162,7 +162,7 @@ def main():
         if test == 'rFELong':
             results['Stiffness (pCa 4.5)'], results['Modulus (pCa 4.5)'], results ['Active Specific Force'], results['RFEStiffness (pCa 4.5)'], results['RFEModulus (pCa 4.5)'], results ['RFEActive Specific Force']=RFE.ktrAnalysis(Data = results['data'], Filename = os.path.basename(file), CSA=results['CSA'], Graph = False)
         if test == 'rFDFast':
-            results['Stiffness (pCa 4.5)'], results['Modulus (pCa 4.5)'], results ['Active Specific Force'], results['RFEStiffness (pCa 4.5)'], results['RFEModulus (pCa 4.5)'], results ['RFEActive Specific Force'], results ['Work (J)']=RFDFast.ktrAnalysis(Data = results['data'], Filename = os.path.basename(file), CSA=results['CSA'], FibreLength=results['Fibre Length'], Graph = True)
+            results['Stiffness (pCa 4.5)'], results['Modulus (pCa 4.5)'], results ['Active Specific Force'], results['RFEStiffness (pCa 4.5)'], results['RFEModulus (pCa 4.5)'], results ['RFEActive Specific Force'], results ['Work (J)']=RFDFast.ktrAnalysis(Data = results['data'], Filename = os.path.basename(file), CSA=results['CSA'], Graph = True)
         if test == 'rFDSlow':
             results['Stiffness (pCa 4.5)'], results['Modulus (pCa 4.5)'], results ['Active Specific Force'], results['RFEStiffness (pCa 4.5)'], results['RFEModulus (pCa 4.5)'], results ['RFEActive Specific Force'], results ['Work (J)']=RFDSlow.ktrAnalysis(Data = results['data'], Filename = os.path.basename(file), CSA=results['CSA'], FibreLength=results['Fibre Length'], Graph = True)
         individual_test_info[file] = results.copy()
