@@ -1,0 +1,165 @@
+import os
+import numpy as np
+import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import openpyxl
+import ISO
+import RFD
+import RFE
+import SSC_Long
+import time
+import tkinter as tk
+from tkinter import filedialog
+import gc
+
+root = tk.Tk()
+root.withdraw()
+
+plt.rcParams.update({
+    'font.family': 'times new roman',
+    'xtick.labelsize': 8,
+    'ytick.labelsize': 8,
+    'axes.labelsize': 10,
+    'axes.titlesize': 10,
+    'axes.spines.right': False,
+    'axes.spines.top': False,
+    'figure.dpi': 200,
+    'legend.edgecolor': 'white',
+    'figure.figsize': [6, 4],
+    'figure.autolayout': True})
+
+class Error(Exception):
+    pass
+
+def prompt_all_inputs(filename):
+    input_data = {'test_type': None, 'subject': None, 'fibre': None}
+
+    def submit():
+        input_data['test_type'] = test_var.get()
+        input_data['subject'] = subject_entry.get()
+        input_data['fibre'] = fibre_entry.get()
+        top.destroy()
+
+    top = tk.Toplevel(root)
+    top.title("File Info Entry")
+    top.geometry("400x250")
+    top.attributes("-topmost", True)
+    
+    top.focus_force()
+    top.grab_set()
+
+    tk.Label(top, text=f"Filename: {filename}", font=('Arial', 10, 'bold')).pack(pady=5)
+
+    tk.Label(top, text="Select test type:").pack()
+    test_var = tk.StringVar(top)
+    test_var.set("ISO")
+    tk.OptionMenu(top, test_var, "ISO", "RFD", "RFe", "SSC Long").pack(pady=5)
+
+    tk.Label(top, text="Subject ID:").pack()
+    subject_entry = tk.Entry(top)
+    subject_entry.pack(pady=5)
+
+    tk.Label(top, text="Fibre #:").pack()
+    fibre_entry = tk.Entry(top)
+    fibre_entry.pack(pady=5)
+
+    tk.Button(top, text="Submit", command=submit).pack(pady=10)
+
+    top.grab_set()
+    top.wait_window()
+
+    return input_data
+
+def ReadFile(File, Filename, test, Subject, Fibre):
+    def GetTextData(skiprows: int, columns: dict) -> pd.DataFrame:
+        return pd.read_table(
+            File,
+            encoding='latin1',
+            header=None,
+            sep=r'\s+',
+            engine='python',
+            on_bad_lines='skip',
+            memory_map=True,
+            skiprows=skiprows,
+            usecols=columns.keys(),
+            names=columns.values())
+
+    Data = GetTextData(skiprows=0, columns={0: 'Time', 1: 'Length', 2: 'Stim', 3: 'Force'})
+
+    try:
+        FibreLength = float(Data['Stim'][10])
+        SarcomereLength = float(Data['Force'][11])
+        Diameter = float(Data['Length'][12])
+        CSA = np.pi * (Diameter / 2) ** 2
+    except:
+        print(Error(f"Physical characteristics for {File} not calculated correctly."))
+
+    data_start = Data.index[Data['Time'] == '5000.00'][0]
+    Data = pd.DataFrame(Data[data_start:], dtype=float).reset_index(drop=True)
+    Baseline_force = Data['Force'][1:500].mean()
+    Data['Force'] = Data['Force'] - Baseline_force
+    Data['Time'] = Data['Time']/(1000)
+
+    results = {
+        'data': Data,
+        'Subject': Subject,
+        'Fibre Length': FibreLength,
+        'Fibre': Fibre,
+        'Sarcomere Length': SarcomereLength,
+        'CSA': CSA
+    }
+
+    if test == 'SSC Long':
+        pass  # leave space for special outputs
+    else:
+        results['Stiffness (pCa 4.5)'] = ''
+        results['Modulus (pCa 4.5)'] = ''
+
+    return results
+
+def main():
+    root.deiconify()
+    Directory = filedialog.askopenfilenames(parent=root)
+    excel_results = pd.DataFrame()
+    graph_setting = False if len(Directory) > 1 else True
+
+    for file in Directory:
+        try: 
+            Filename = os.path.basename(file).replace('.dat', '')
+            inputs = prompt_all_inputs(Filename)
+
+            results = ReadFile(
+                File=file,
+                Filename=Filename,
+                test=inputs['test_type'],
+                Subject=inputs['subject'],
+                Fibre=inputs['fibre']
+            )
+
+            if inputs['test_type'] == 'RFe':
+                results['Active Specific Force'] = RFE.SFAnalysis(Data=results['data'], Filename=Filename, CSA=results['CSA'], Graph=graph_setting)
+            elif inputs['test_type'] == 'RFD':
+                results['Active Specific Force'] = RFD.SFAnalysis(Data=results['data'], Filename=Filename, CSA=results['CSA'], Graph=graph_setting)
+            elif inputs['test_type'] == 'ISO':
+                results['Active Specific Force'] = ISO.SFAnalysis(Data=results['data'], Filename=Filename, CSA=results['CSA'], Graph=graph_setting)
+            elif inputs['test_type'] == 'SSC Long':
+                res = SSC_Long.ktrAnalysis(Data=results['data'], Filename=Filename, CSA=results['CSA'], Graph=graph_setting)
+                results['Stiffness (pCa 4.5)'], results['Modulus (pCa 4.5)'], results['Active Specific Force'], results['Stretch Work'], results['Shorten Work'] = res
+
+            clean_results = results.copy()
+            del clean_results['data']
+            for key, value in clean_results.items():
+                excel_results.loc[file, key] = value
+            time.sleep(1)
+            gc.collect()
+        except Exception as e:
+                print(f"Error processing file {file}: {e}")
+                continue
+    return excel_results
+
+if __name__ == "__main__":
+    final_df = main()
+    final_df.to_excel('/Users/Joshbriar/Desktop/Outputd4.xlsx', index=False)
+    print(f"Results saved")
