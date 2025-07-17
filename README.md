@@ -1,2 +1,9 @@
-# Muscle Analysis Code to Sharing
-Analysis code to analyze data collected from UoG. Each iteration of code is relayed into specific lab or experiment folders - please only use the folders assigned to you as the analysis is specific to each study. Acknowledgement for this code is appreciated :D
+# Muscle Fibre Code to share
+Python code to analyze single fibre work from UoG
+
+Iterations of code are unique to the ongoing studies - pushes to main are not restricted so ensure that you note any changes that you make
+SSC, RFD, and RFE code updated July 17th, 2025
+
+Please reach out if you have any questions
+Acknowlegement, authorship, or coffee is appreciated
+    - KJB
